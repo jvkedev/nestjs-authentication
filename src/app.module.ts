@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -18,7 +19,10 @@ import { AppService } from './app.service';
         const logger = new Logger('Database');
 
         const host = configService.get<string>('DB_HOST');
-        const port = configService.get<number>('DB_PORT');
+        const port = parseInt(
+          configService.get<string>('DB_PORT') || '5432',
+          10,
+        );
         const database = configService.get<string>('DB_NAME');
 
         logger.log(
@@ -41,6 +45,8 @@ import { AppService } from './app.service';
         };
       },
     }),
+
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
