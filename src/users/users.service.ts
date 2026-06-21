@@ -8,22 +8,41 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 import { EmailAlreadyExistsException } from '../common/exceptions/email-already-exists.exception';
 import { UserNotFoundException } from '../common/exceptions/user-not-found.exception';
+import { PasswordService } from '../common/services/password.service';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly passwordService: PasswordService,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
-    const existingUser = await this.userRepository.findOne({
-      where: { email: createUserDto.email },
+    const exists = await this.userRepository.existsBy({
+      email: createUserDto.email,
     });
 
-    if (existingUser) throw new EmailAlreadyExistsException();
+    if (exists) throw new EmailAlreadyExistsException();
 
-    const user = this.userRepository.create(createUserDto);
-    return await this.userRepository.save(user);
+    const hashedPassword = await this.passwordService.hash(
+      createUserDto.password,
+    );
+
+    const user = this.userRepository.create({
+      ...createUserDto,
+      password: hashedPassword,
+    });
+
+    return this.userRepository.save(user);
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email =  :email', { email })
+      .getOne();
   }
 
   async findAll() {
